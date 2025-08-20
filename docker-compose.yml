@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/traefik.yml:ro
+      - ./traefik/certs:/certs
+    networks:
+      - dms-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls=true"
+
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: openldap
+    restart: unless-stopped
+    environment:
+      LDAP_ORGANISATION: "DMS Org"
+      LDAP_DOMAIN: "dms.local"
+      LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-adminpassword}
+      LDAP_CONFIG_PASSWORD: ${LDAP_CONFIG_PASSWORD:-configpassword}
+      LDAP_TLS: "false"  # Disable TLS for simplicity; enable in prod
+    volumes:
+      - ./openldap/init.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/init.ldif:ro
+      - openldap-data:/var/lib/ldap
+      - openldap-config:/etc/ldap/slapd.d
+    networks:
+      - dms-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.4
+    container_name: keycloak
+    restart: unless-stopped
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloakpassword}
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-adminpassword}
+      KC_HOSTNAME: keycloak.localhost
+      KC_HTTP_ENABLED: "true"
+      KC_HTTPS_ENABLED: "true"
+      KC_PROXY: edge
+    depends_on:
+      - postgres
+      - openldap
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json:ro
+    command: start-dev --import-realm
+    networks:
+      - dms-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.rule=Host(`keycloak.localhost`)"
+      - "traefik.http.routers.keycloak.entrypoints=websecure"
+      - "traefik.http.routers.keycloak.tls=true"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+
+  jbpm:
+    image: jboss/jbpm-server-full:7.74.1.Final
+    container_name: jbpm
+    restart: unless-stopped
+    environment:
+      JBPM_DB_DRIVER: postgres
+      JBPM_DB_HOST: postgres
+      JBPM_DB_PORT: 5432
+      JBPM_DB_NAME: jbpm
+      JBPM_DB_USER: jbpm
+      JBPM_DB_PASSWORD: ${JBPM_DB_PASSWORD:-jbpmpassword}
+      # Keycloak integration for auth
+      KEYCLOAK_URL: https://keycloak.localhost/auth
+      KEYCLOAK_REALM: dms-realm
+      KEYCLOAK_CLIENT_ID: jbpm-client
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-clientsecret}  # Set in Keycloak
+      JBPM_HT_CALLBACK_CLASS: org.jbpm.services.task.identity.KeycloakUserGroupCallbackImpl
+      JBPM_HT_CALLBACK_PROPERTIES: keycloak.url=${KEYCLOAK_URL},keycloak.realm=${KEYCLOAK_REALM},keycloak.clientId=${KEYCLOAK_CLIENT_ID},keycloak.clientSecret=${KEYCLOAK_CLIENT_SECRET}
+    depends_on:
+      - postgres
+      - keycloak
+    networks:
+      - dms-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jbpm.rule=Host(`jbpm.localhost`)"
+      - "traefik.http.routers.jbpm.entrypoints=websecure"
+      - "traefik.http.routers.jbpm.tls=true"
+      - "traefik.http.services.jbpm.loadbalancer.server.port=8080"
+
+  mongodb:
+    image: mongo:8.0
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-mongopassword}
+      MONGO_INITDB_DATABASE: bpdata
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - dms-net
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_MULTIPLE_DATABASES: keycloak,jbpm
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - dms-net
+
+volumes:
+  openldap-data:
+  openldap-config:
+  mongodb-data:
+  postgres-data:
+
+networks:
+  dms-net:
+    driver: bridge

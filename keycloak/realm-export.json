@@ -1,0 +1,57 @@
+{
+  "id": "dms-realm",
+  "realm": "dms-realm",
+  "displayName": "DMS Realm",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "components": {
+    "org.keycloak.user.federation.UserFederationProvider": [
+      {
+        "id": "ldap-federation",
+        "name": "openldap-federation",
+        "providerId": "ldap",
+        "config": {
+          "vendor": "other",
+          "usernameLDAPAttribute": "uid",
+          "rdnLDAPAttribute": "uid",
+          "uuidLDAPAttribute": "entryUUID",
+          "userObjectClasses": "inetOrgPerson, organizationalPerson",
+          "connectionUrl": "ldap://openldap:389",
+          "usersDn": "ou=users,dc=dms,dc=local",
+          "bindCredential": "adminpassword",
+          "bindDn": "cn=admin,dc=dms,dc=local",
+          "searchScope": "1",
+          "pagination": "true",
+          "editMode": "READ_ONLY",
+          "syncRegistrations": "false",
+          "allowKerberosAuthentication": "false",
+          "useKerberosForPasswordAuthentication": "false"
+        }
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "jbpm-client",
+      "name": "JBPM Client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "clientsecret",
+      "redirectUris": ["https://jbpm.localhost/business-central/*", "https://jbpm.localhost/kie-server/*"],
+      "webOrigins": ["https://jbpm.localhost"],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "publicClient": false
+    }
+  ]
+}
+
