@@ -31,12 +31,9 @@ services:
       LDAP_ROOT: dc=dms,dc=local
       BITNAMI_DEBUG: "true"
     volumes:
-      - ./openldap/custom-entrypoint.sh:/entrypoint.sh:ro
       - openldap-data:/bitnami/openldap
     ports:
-      - "1389:389"  # Keep for external testing
-    entrypoint: ["/bin/bash", "/entrypoint.sh"]
-    command: ["/opt/bitnami/scripts/openldap/entrypoint.sh", "/opt/bitnami/scripts/openldap/run.sh"]
+      - "1389:389"  # For external testing
     networks:
       - dms-net
     healthcheck:
