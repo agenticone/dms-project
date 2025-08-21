@@ -29,15 +29,22 @@ services:
       LDAP_USERS: testuser
       LDAP_PASSWORDS: testpassword
       LDAP_ROOT: dc=dms,dc=local
+      BITNAMI_DEBUG: "true"
     volumes:
+      - ./openldap/custom-entrypoint.sh:/entrypoint.sh:ro
       - openldap-data:/bitnami/openldap
+    ports:
+      - "1389:389"  # Keep for external testing
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    command: ["/opt/bitnami/scripts/openldap/entrypoint.sh", "/opt/bitnami/scripts/openldap/run.sh"]
     networks:
       - dms-net
     healthcheck:
-      test: ["CMD", "ldapwhoami", "-H", "ldap://localhost", "-D", "cn=admin,dc=dms,dc=local", "-w", "${LDAP_ADMIN_PASSWORD:-adminpassword}"]
+      test: ["CMD-SHELL", "ldapwhoami -H ldap://localhost:389 -D cn=admin,dc=dms,dc=local -w ${LDAP_ADMIN_PASSWORD:-adminpassword} || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 20
+      start_period: 120s
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.4
@@ -82,18 +89,17 @@ services:
       JBPM_DB_NAME: jbpm
       JBPM_DB_USER: jbpm
       JBPM_DB_PASSWORD: ${JBPM_DB_PASSWORD:-jbpmpassword}
-      # Keycloak integration for auth
-      KEYCLOAK_URL: https://keycloak.localhost/auth
-      KEYCLOAK_REALM: dms-realm
-      KEYCLOAK_CLIENT_ID: jbpm-client
-      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-clientsecret}  # Set in Keycloak
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-https://keycloak.localhost/auth}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-dms-realm}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-jbpm-client}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-clientsecret}
       JBPM_HT_CALLBACK_CLASS: org.jbpm.services.task.identity.KeycloakUserGroupCallbackImpl
-      JBPM_HT_CALLBACK_PROPERTIES: keycloak.url=${KEYCLOAK_URL},keycloak.realm=${KEYCLOAK_REALM},keycloak.clientId=${KEYCLOAK_CLIENT_ID},keycloak.clientSecret=${KEYCLOAK_CLIENT_SECRET}
+      JBPM_HT_CALLBACK_PROPERTIES: keycloak.url=${KEYCLOAK_URL:-https://keycloak.localhost/auth},keycloak.realm=${KEYCLOAK_REALM:-dms-realm},keycloak.clientId=${KEYCLOAK_CLIENT_ID:-jbpm-client},keycloak.clientSecret=${KEYCLOAK_CLIENT_SECRET:-clientsecret}
     depends_on:
       postgres:
         condition: service_healthy
-      openldap:
-        condition: service_healthy
+      keycloak:
+        condition: service_started
     networks:
       - dms-net
     labels:

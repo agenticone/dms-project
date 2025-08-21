@@ -1,15 +1,25 @@
 #!/bin/bash
 set -e
 
-# Copy custom LDIF to ensure correct permissions
-cp /vagrant/openldap/init.ldif /container/service/slapd/assets/config/bootstrap/ldif/custom/init.ldif
-chown openldap:openldap /container/service/slapd/assets/config/bootstrap/ldif/custom/init.ldif
+# Debug slapd startup
+echo "Starting slapd with debug logging..."
+/opt/bitnami/openldap/sbin/slapd -h "ldap://0.0.0.0:389 ldaps://0.0.0.0:636" -d 256 &
 
-# Skip problematic sed operations by overriding replication and password change
-echo "Skipping replication-disable and root-password-change LDIF processing"
+# Wait for slapd to start
+echo "Waiting for slapd to be ready..."
+for i in {1..60}; do
+    if nc -z localhost 389; then
+        echo "slapd is ready on port 389"
+        break
+    fi
+    sleep 1
+done
 
-# Set environment variables to disable replication explicitly
-export LDAP_NO_REPLICATION=true
+# Verify slapd is running
+if ! ps aux | grep -v grep | grep slapd > /dev/null; then
+    echo "Error: slapd failed to start"
+    exit 1
+fi
 
-# Run slapd directly
-exec /container/run/process/slapd/run
+# Keep container running
+exec "$@"
