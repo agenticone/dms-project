@@ -1,23 +1,22 @@
 services:
   traefik:
-    image: traefik:v3.1
+    image: traefik:v3.0
     container_name: traefik
     restart: unless-stopped
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--log.level=DEBUG"  # Enable debug logging
     ports:
       - "80:80"
       - "443:443"
+      - "8080:8080"  # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/traefik.yml:/traefik.yml:ro
-      - ./traefik/certs:/certs
     networks:
       - dms-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.localhost`)"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.entrypoints=websecure"
-      - "traefik.http.routers.dashboard.tls=true"
 
   openldap:
     image: bitnami/openldap:2.6
@@ -37,7 +36,7 @@ services:
     networks:
       - dms-net
     healthcheck:
-      test: ["CMD-SHELL", "ldapwhoami -H ldap://localhost:389 -D cn=admin,dc=dms,dc=local -w ${LDAP_ADMIN_PASSWORD:-adminpassword} || exit 1"]
+      test: ["CMD-SHELL", "ldapwhoami -H ldap://localhost:1389 -D cn=admin,dc=dms,dc=local -w ${LDAP_ADMIN_PASSWORD:-adminpassword} || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -49,7 +48,7 @@ services:
     restart: unless-stopped
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak?connectTimeout=30&socketTimeout=30&tcpKeepAlive=true
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloakpassword}
       KEYCLOAK_ADMIN: admin
@@ -58,6 +57,7 @@ services:
       KC_HTTP_ENABLED: "true"
       KC_HTTPS_ENABLED: "true"
       KC_PROXY: edge
+      KC_LOG_LEVEL: DEBUG  # Enable debug logging
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,6 +74,12 @@ services:
       - "traefik.http.routers.keycloak.entrypoints=websecure"
       - "traefik.http.routers.keycloak.tls=true"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 90s
 
   jbpm:
     image: jboss/jbpm-server-full:7.61.0.Final
