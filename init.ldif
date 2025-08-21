@@ -1,0 +1,36 @@
+dn: ou=users,dc=dms,dc=local
+objectClass: organizationalUnit
+ou: users
+
+dn: uid=testuser,ou=users,dc=dms,dc=local
+objectClass: inetOrgPerson
+uid: testuser
+cn: Test User
+sn: User
+userPassword: testpassword
+mail: testuser@dms.local
+
+dn: uid=demo1user,ou=users,dc=dms,dc=local
+objectClass: inetOrgPerson
+uid: demo1user
+cn: Demo 1 User
+sn: User
+userPassword: demo1password
+mail: demo1user@dms.local
+
+dn: uid=demo2user,ou=users,dc=dms,dc=local
+objectClass: inetOrgPerson
+uid: demo2user
+cn: Demo 2 User
+sn: User
+userPassword: demo2password
+mail: demo2user@dms.local
+
+dn: uid=demo3user,ou=users,dc=dms,dc=local
+objectClass: inetOrgPerson
+uid: demo3user
+cn: Demo 3 User
+sn: User
+userPassword: demo3password
+mail: demo3user@dms.local
+
