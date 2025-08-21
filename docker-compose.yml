@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   traefik:
     image: traefik:v3.1
@@ -22,19 +20,17 @@ services:
       - "traefik.http.routers.dashboard.tls=true"
 
   openldap:
-    image: osixia/openldap:1.5.0
+    image: bitnami/openldap:2.6
     container_name: openldap
     restart: unless-stopped
     environment:
-      LDAP_ORGANISATION: "DMS Org"
-      LDAP_DOMAIN: "dms.local"
+      LDAP_ADMIN_USERNAME: admin
       LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-adminpassword}
-      LDAP_CONFIG_PASSWORD: ${LDAP_CONFIG_PASSWORD:-configpassword}
-      LDAP_TLS: "false"
+      LDAP_USERS: testuser
+      LDAP_PASSWORDS: testpassword
+      LDAP_ROOT: dc=dms,dc=local
     volumes:
-      - ./openldap/init.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/init.ldif  # Removed :ro
-      - openldap-data:/var/lib/ldap
-      - openldap-config:/etc/ldap/slapd.d
+      - openldap-data:/bitnami/openldap
     networks:
       - dms-net
     healthcheck:
@@ -59,8 +55,10 @@ services:
       KC_HTTPS_ENABLED: "true"
       KC_PROXY: edge
     depends_on:
-      - postgres
-      - openldap
+      postgres:
+        condition: service_healthy
+      openldap:
+        condition: service_healthy
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json:ro
     command: start-dev --import-realm
@@ -92,8 +90,10 @@ services:
       JBPM_HT_CALLBACK_CLASS: org.jbpm.services.task.identity.KeycloakUserGroupCallbackImpl
       JBPM_HT_CALLBACK_PROPERTIES: keycloak.url=${KEYCLOAK_URL},keycloak.realm=${KEYCLOAK_REALM},keycloak.clientId=${KEYCLOAK_CLIENT_ID},keycloak.clientSecret=${KEYCLOAK_CLIENT_SECRET}
     depends_on:
-      - postgres
-      - keycloak
+      postgres:
+        condition: service_healthy
+      openldap:
+        condition: service_healthy
     networks:
       - dms-net
     labels:
@@ -123,11 +123,16 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
-      POSTGRES_MULTIPLE_DATABASES: keycloak,jbpm
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql  # Remove :ro if present
     networks:
       - dms-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   openldap-data:

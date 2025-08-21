@@ -24,7 +24,7 @@
           "userObjectClasses": "inetOrgPerson, organizationalPerson",
           "connectionUrl": "ldap://openldap:389",
           "usersDn": "ou=users,dc=dms,dc=local",
-          "bindCredential": "adminpassword",
+          "bindCredential": "${LDAP_ADMIN_PASSWORD:-adminpassword}",
           "bindDn": "cn=admin,dc=dms,dc=local",
           "searchScope": "1",
           "pagination": "true",
@@ -54,4 +54,3 @@
     }
   ]
 }
-
