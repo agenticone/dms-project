@@ -22,7 +22,7 @@
           "rdnLDAPAttribute": "uid",
           "uuidLDAPAttribute": "entryUUID",
           "userObjectClasses": "inetOrgPerson, organizationalPerson",
-          "connectionUrl": "ldap://openldap:389",
+          "connectionUrl": "ldap://openldap:1389",
           "usersDn": "ou=users,dc=dms,dc=local",
           "bindCredential": "${LDAP_ADMIN_PASSWORD:-adminpassword}",
           "bindDn": "cn=admin,dc=dms,dc=local",

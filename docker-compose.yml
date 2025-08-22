@@ -3,18 +3,18 @@ services:
     image: traefik:v3.0
     container_name: traefik
     restart: unless-stopped
+    # Configuration is now loaded from traefik.yml, command-line args override it
     command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--log.level=DEBUG"  # Enable debug logging
+      - "--api.insecure=true" # Allows access to dashboard on 8080 without auth
+      - "--log.level=DEBUG"
     ports:
       - "80:80"
       - "443:443"
       - "8080:8080"  # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/certs:/certs:ro
     networks:
       - dms-net
 
@@ -32,7 +32,7 @@ services:
     volumes:
       - openldap-data:/bitnami/openldap
     ports:
-      - "1389:389"  # For external testing
+      - "1389:1389"  # For external testing. Bitnami OpenLDAP uses port 1389.
     networks:
       - dms-net
     healthcheck:
@@ -102,7 +102,7 @@ services:
       postgres:
         condition: service_healthy
       keycloak:
-        condition: service_started
+        condition: service_healthy
     networks:
       - dms-net
     labels:
@@ -132,9 +132,12 @@ services:
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
       POSTGRES_USER: postgres
+      # Pass DB passwords for init script
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloakpassword}
+      JBPM_DB_PASSWORD: ${JBPM_DB_PASSWORD:-jbpmpassword}
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     volumes:
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - postgres-data:/var/lib/postgresql/data
     networks:
       - dms-net
