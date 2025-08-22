@@ -11,27 +11,29 @@
   "editUsernameAllowed": false,
   "bruteForceProtected": true,
   "components": {
-    "org.keycloak.user.federation.UserFederationProvider": [
+    "org.keycloak.storage.UserStorageProvider": [
       {
         "id": "ldap-federation",
         "name": "openldap-federation",
         "providerId": "ldap",
         "config": {
-          "vendor": "other",
-          "usernameLDAPAttribute": "uid",
-          "rdnLDAPAttribute": "uid",
-          "uuidLDAPAttribute": "entryUUID",
-          "userObjectClasses": "inetOrgPerson, organizationalPerson",
-          "connectionUrl": "ldap://openldap:1389",
-          "usersDn": "ou=users,dc=dms,dc=local",
-          "bindCredential": "${LDAP_ADMIN_PASSWORD:-adminpassword}",
-          "bindDn": "cn=admin,dc=dms,dc=local",
-          "searchScope": "1",
-          "pagination": "true",
-          "editMode": "READ_ONLY",
-          "syncRegistrations": "false",
-          "allowKerberosAuthentication": "false",
-          "useKerberosForPasswordAuthentication": "false"
+          "vendor": ["other"],
+          "usernameLDAPAttribute": ["uid"],
+          "rdnLDAPAttribute": ["uid"],
+          "uuidLDAPAttribute": ["entryUUID"],
+          "userObjectClasses": ["inetOrgPerson, organizationalPerson"],
+          "connectionUrl": ["ldap://openldap:1389"],
+          "connectionTimeout": ["5000"],
+          "readTimeout": ["5000"],
+          "usersDn": ["ou=users,dc=dms,dc=local"],
+          "bindCredential": ["${LDAP_ADMIN_PASSWORD:-adminpassword}"],
+          "bindDn": ["cn=admin,dc=dms,dc=local"],
+          "searchScope": ["1"],
+          "pagination": ["true"],
+          "editMode": ["READ_ONLY"],
+          "syncRegistrations": ["false"],
+          "allowKerberosAuthentication": ["false"],
+          "useKerberosForPasswordAuthentication": ["false"]
         }
       }
     ]

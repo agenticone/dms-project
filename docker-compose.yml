@@ -77,9 +77,9 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
       interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 90s
+      timeout: 10s
+      retries: 30
+      start_period: 180s
 
   jbpm:
     image: jboss/jbpm-server-full:7.61.0.Final
