@@ -57,7 +57,7 @@ services:
       KC_HTTP_ENABLED: "true"
       KC_HTTPS_ENABLED: "true"
       KC_PROXY: edge
-      KC_LOG_LEVEL: DEBUG  # Enable debug logging
+      KC_LOG_LEVEL: DEBUG
     depends_on:
       postgres:
         condition: service_healthy
@@ -130,11 +130,12 @@ services:
     container_name: postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_USER: postgres
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres-data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql  # Remove :ro if present
     networks:
       - dms-net
     healthcheck:
@@ -142,6 +143,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
 volumes:
   openldap-data:
