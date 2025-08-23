@@ -20,7 +20,7 @@
           "vendor": ["other"],
           "usernameLDAPAttribute": ["uid"],
           "rdnLDAPAttribute": ["uid"],
-          "uuidLDAPAttribute": ["entryUUID"],
+          "uuidLDAPAttribute": ["uid"],
           "userObjectClasses": ["inetOrgPerson"],
           "connectionUrl": ["ldap://openldap:1389"],
           "connectionTimeout": ["5000"],

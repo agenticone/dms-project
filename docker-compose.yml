@@ -61,6 +61,7 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-adminpassword}
       KC_HOSTNAME: ${KEYCLOAK_HOSTNAME}
       JBPM_HOSTNAME: ${JBPM_HOSTNAME} # Pass JBPM hostname for realm import substitution
+      LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-adminpassword} # Pass LDAP password for realm import
       KC_HEALTH_ENABLED: "true"
       KC_HTTP_ENABLED: "true"
       KC_HTTPS_ENABLED: "true"
