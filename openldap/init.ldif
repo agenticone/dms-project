@@ -1,36 +1,106 @@
+# Create the Organizational Unit for users
 dn: ou=users,dc=dms,dc=local
 objectClass: organizationalUnit
 ou: users
 
-dn: uid=testuser,ou=users,dc=dms,dc=local
-objectClass: inetOrgPerson
-uid: testuser
-cn: Test User
-sn: User
-userPassword: testpassword
-mail: testuser@dms.local
+# A blank line is required between entries
 
-dn: uid=demo1user,ou=users,dc=dms,dc=local
+# Create user01
+dn: uid=user01,ou=users,dc=dms,dc=local
 objectClass: inetOrgPerson
-uid: demo1user
-cn: Demo 1 User
-sn: User
-userPassword: demo1password
-mail: demo1user@dms.local
+cn: User One
+sn: One
+givenName: User
+uid: user01
+mail: user01@dms.local
+userPassword: password01
 
-dn: uid=demo2user,ou=users,dc=dms,dc=local
+# Create user 2
+dn: uid=user02,ou=users,dc=dms,dc=local
 objectClass: inetOrgPerson
-uid: demo2user
-cn: Demo 2 User
-sn: User
-userPassword: demo2password
-mail: demo2user@dms.local
+cn: User Two
+sn: Two
+givenName: User
+uid: user02
+mail: user02@dms.local
+userPassword: password02
 
-dn: uid=demo3user,ou=users,dc=dms,dc=local
+# Create user 3
+dn: uid=user03,ou=users,dc=dms,dc=local
 objectClass: inetOrgPerson
-uid: demo3user
-cn: Demo 3 User
-sn: User
-userPassword: demo3password
-mail: demo3user@dms.local
+cn: User Three
+sn: Three
+givenName: User
+uid: user03
+mail: user03@dms.local
+userPassword: password03
 
+# Create user 4
+dn: uid=user04,ou=users,dc=dms,dc=local
+objectClass: inetOrgPerson
+cn: User Four
+sn: Four
+givenName: User
+uid: user04
+mail: user04@dms.local
+userPassword: password04
+
+# Create user 5
+dn: uid=user05,ou=users,dc=dms,dc=local
+objectClass: inetOrgPerson
+cn: User Five
+sn: Five
+givenName: User
+uid: user05
+mail: user05@dms.local
+userPassword: password05
+
+# Create user 6
+dn: uid=user06,ou=users,dc=dms,dc=local
+objectClass: inetOrgPerson
+cn: User Six
+sn: Six
+givenName: User
+uid: user06
+mail: user06@dms.local
+userPassword: password06
+
+# Create user 7
+dn: uid=user07,ou=users,dc=dms,dc=local
+objectClass: inetOrgPerson
+cn: User Seven
+sn: Seven
+givenName: User
+uid: user07
+mail: user07@dms.local
+userPassword: password07
+
+# Create user 8
+dn: uid=user08,ou=users,dc=dms,dc=local
+objectClass: inetOrgPerson
+cn: User Eight
+sn: Eight
+givenName: User
+uid: user08
+mail: user08@dms.local
+userPassword: password08
+
+# Create user 9
+dn: uid=user09,ou=users,dc=dms,dc=local
+objectClass: inetOrgPerson
+cn: User Nine
+sn: Nine
+givenName: User
+uid: user09
+mail: user09@dms.local
+userPassword: password09
+
+# Create user 10
+dn: uid=user10,ou=users,dc=dms,dc=local
+objectClass: inetOrgPerson
+cn: User Ten
+sn: Ten
+givenName: User
+uid: user10
+mail: user10@dms.local
+userPassword: password10

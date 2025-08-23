@@ -32,31 +32,51 @@ This automates creating a Ubuntu VM on Hyper-V, bridged to 'ExtSwitchWSLBridge',
    - In VM: `vagrant ssh`, then `ip addr show eth1` (or similar; shows IP from bridged network).
    - On host: Ping the VM's IP.
    - Verification: VM has external IP (not 10.x.x.x NAT). Access Keycloak: https://<vm-ip> (or via localhost if port forwarded, but bridged allows direct).
-   - Debug: If no IP, check Hyper-V Manager > VM Settings > Network Adapter > Virtual switch set to 'ExtSwitchWSLBridge'. Restart VM: `vagrant reload`.
+   - Debug: If no IP, check Hyper-V Manager > VM Settings > Network Adapter > Virtual switch is set correctly. Restart VM: `vagrant reload`.
 
 4. **Verify DMS Stack Inside VM**
    - SSH: `vagrant ssh`.
    - Run `docker ps` (all services up).
-   - Follow previous README steps 5-10 for individual service verification (e.g., ldapsearch, Keycloak UI at https://<vm-ip>, etc.).
-   - JBPM dashboard: https://<vm-ip>/business-central (via Traefik).
-   - Verification: Logs: `docker compose logs -f`. Access Traefik dashboard: https://<vm-ip>/dashboard/.
+   - Verify LDAP users: `docker compose exec openldap ldapsearch -x -H ldap://localhost:1389 -b "ou=users,dc=dms,dc=local" "(objectClass=inetOrgPerson)" uid cn`
+   - JBPM dashboard: `https://jbpm.dms.local/business-central` (via Traefik).
+   - Verification: Logs: `docker compose logs -f`. Access Traefik dashboard: `https://traefik.dms.local`.
    - Debug: If compose fails, check /vagrant/docker-compose.yml paths. Regenerate certs if SSL issues. Restart: `docker compose down && docker compose up -d`.
 
 5. **Access Services from Host**
    - Use the VM's bridged IP (find with `vagrant ssh -c "ip addr show"`).
-   - Add to hosts file if needed: e.g., C:\Windows\System32\drivers\etc\hosts – `<vm-ip> keycloak.localhost jbpm.localhost`.
-   - Verification: Browser: https://jbpm.localhost/business-central (accept self-signed cert).
+   - Add to hosts file if needed: e.g., C:\Windows\System32\drivers\etc\hosts – `<vm-ip> traefik.dms.local keycloak.dms.local jbpm.dms.local`.
+   - Verification: Browser: `https://jbpm.dms.local/business-central` (accept self-signed cert).
    - Debug: Firewall: Allow inbound on VM (ufw allow if enabled). Ensure Traefik labels correct.
 
-6. **Teardown**
+6. **Security Note: Traefik Dashboard Password**
+   The `docker-compose.yml` file contains a default password hash for the Traefik dashboard. For any real deployment, you should generate your own. You can do this by installing `apache2-utils` (`sudo apt-get install apache2-utils`) and running:
+   `echo $(htpasswd -nb admin your_new_password) | sed -e s/\\$/\\$\\$/g`
+   Replace the `users` value in the Traefik labels with the output of this command.
+
+7. **Teardown**
    - `vagrant halt` to stop, `vagrant destroy` to delete VM.
    - Verification: Hyper-V Manager shows VM off/deleted.
    - Debug: If destroy fails, manually delete in Hyper-V Manager.
 
+## Troubleshooting
+
+### "Connection Refused" or "Unable to Connect" from Host
+
+This error means your request is not reaching the Traefik service. Follow these steps to diagnose:
+
+1.  **Check Traefik Container:** SSH into the VM (`vagrant ssh`) and run `docker ps`. Ensure the `traefik` container is in a `running` state.
+2.  **Check Listening Ports:** Inside the VM, verify that Docker is listening on ports 80 and 443.
+    ```bash
+    sudo ss -tlpn | grep -E ':80|:443'
+    ```
+    You should see output showing a `docker-proxy` process for both ports. If not, the Traefik container failed to start or bind the ports. Check its logs with `docker logs traefik`.
+3.  **Check VM Firewall:** The `provision.sh` script configures `ufw`. Verify its status with `sudo ufw status`. It should show ports 22, 80, and 443 as `ALLOW`.
+4.  **Check Host Firewall:** On your Windows host, ensure your firewall (e.g., Windows Defender Firewall) allows inbound traffic on TCP ports 80 and 443 for the network profile used by your Hyper-V virtual switch (often "Public"). You can test the connection with `Test-NetConnection -ComputerName <VM_IP> -Port 443`.
+
 ## Additional Tips
 - Customize: Edit Vagrantfile for more CPUs/RAM. Add port forwards if needed (config.vm.network "forwarded_port", ...).
 - Scripts: provision.sh runs once; for reprovision: `vagrant provision`.
-- Security: Change .env passwords. For prod, use proper certs.
+- Security: Change `.env` passwords. For prod, use proper certs and generate your own Traefik password.
 - Issues: Check Vagrant logs in .vagrant/ folder. Hyper-V errors: Event Viewer > Applications and Services Logs > Microsoft > Windows > Hyper-V-VMMS.
 - Updates: For newer Ubuntu/Docker, update box version in Vagrantfile.
 
