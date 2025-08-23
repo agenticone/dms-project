@@ -4,10 +4,16 @@ set -e
 
 echo "Updating system..."
 sudo apt-get update -y
-sudo apt-get upgrade -y
 
 echo "Installing prerequisites..."
 sudo apt-get install -y ca-certificates curl gnupg lsb-release openssl
+
+echo "Configuring firewall..."
+sudo apt-get install -y ufw
+sudo ufw allow ssh       # Allow SSH connections
+sudo ufw allow http      # Allow HTTP on port 80
+sudo ufw allow https     # Allow HTTPS on port 443
+sudo ufw --force enable  # Enable the firewall
 
 echo "Installing Docker..."
 sudo mkdir -p /etc/apt/keyrings
@@ -24,7 +30,11 @@ sudo usermod -aG docker vagrant  # Allow vagrant user to run docker
 echo "Generating self-signed certs if not exist..."
 mkdir -p /vagrant/traefik/certs
 if [ ! -f /vagrant/traefik/certs/selfsigned.key ]; then
-  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /vagrant/traefik/certs/selfsigned.key -out /vagrant/traefik/certs/selfsigned.crt -subj "/CN=localhost"
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /vagrant/traefik/certs/selfsigned.key \
+    -out /vagrant/traefik/certs/selfsigned.crt \
+    -subj "/CN=dms.local" \
+    -addext "subjectAltName = DNS:traefik.dms.local,DNS:keycloak.dms.local,DNS:jbpm.dms.local"
 fi
 
 echo "Starting Docker Compose..."

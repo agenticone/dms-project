@@ -1,6 +1,9 @@
 log:
   level: INFO
 
+api:
+  dashboard: true
+
 entryPoints:
   web:
     address: :80
@@ -15,13 +18,6 @@ entryPoints:
 providers:
   docker:
     exposedByDefault: false
-
-certificatesResolvers:
-  myresolver:
-    acme:
-      # email: your-email@example.com  # Uncomment for Let's Encrypt
-      # storage: /letsencrypt/acme.json
-      # tlsChallenge: {}  # Or httpChallenge for prod
 tls:
   options:
     default:

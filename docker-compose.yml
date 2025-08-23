@@ -4,19 +4,28 @@ services:
     container_name: traefik
     restart: unless-stopped
     # Configuration is now loaded from traefik.yml, command-line args override it
-    command:
-      - "--api.insecure=true" # Allows access to dashboard on 8080 without auth
-      - "--log.level=DEBUG"
+    command: ["--log.level=DEBUG"]
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"  # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/certs:/certs:ro
     networks:
       - dms-net
+    labels:
+      # Enable Traefik to route to its own dashboard
+      - "traefik.enable=true"
+      # Define the router for the dashboard, using the internal 'api' service
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.dms.local`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls=true"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      # Add Basic Authentication middleware. Replace the user hash with the one you generated.
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$QVXgZ79u$$Qn/s5tQYyKdX66Vf462K20" # Default: admin/your_secure_password
+      # Apply the auth middleware to the dashboard router
+      - "traefik.http.routers.traefik-dashboard.middlewares=dashboard-auth"
 
   openldap:
     image: bitnami/openldap:2.6
@@ -31,8 +40,6 @@ services:
       BITNAMI_DEBUG: "true"
     volumes:
       - openldap-data:/bitnami/openldap
-    ports:
-      - "1389:1389"  # For external testing. Bitnami OpenLDAP uses port 1389.
     networks:
       - dms-net
     healthcheck:
@@ -53,7 +60,7 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloakpassword}
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-adminpassword}
-      KC_HOSTNAME: keycloak.localhost
+      KC_HOSTNAME: keycloak.dms.local
       KC_HEALTH_ENABLED: "true"
       KC_HTTP_ENABLED: "true"
       KC_HTTPS_ENABLED: "true"
@@ -71,7 +78,7 @@ services:
       - dms-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.keycloak.rule=Host(`keycloak.localhost`)"
+      - "traefik.http.routers.keycloak.rule=Host(`keycloak.dms.local`)"
       - "traefik.http.routers.keycloak.entrypoints=websecure"
       - "traefik.http.routers.keycloak.tls=true"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
@@ -93,12 +100,12 @@ services:
       JBPM_DB_NAME: jbpm
       JBPM_DB_USER: jbpm
       JBPM_DB_PASSWORD: ${JBPM_DB_PASSWORD:-jbpmpassword}
-      KEYCLOAK_URL: ${KEYCLOAK_URL:-https://keycloak.localhost/auth}
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-https://keycloak.dms.local/auth}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-dms-realm}
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-jbpm-client}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-clientsecret}
       JBPM_HT_CALLBACK_CLASS: org.jbpm.services.task.identity.KeycloakUserGroupCallbackImpl
-      JBPM_HT_CALLBACK_PROPERTIES: keycloak.url=${KEYCLOAK_URL:-https://keycloak.localhost/auth},keycloak.realm=${KEYCLOAK_REALM:-dms-realm},keycloak.clientId=${KEYCLOAK_CLIENT_ID:-jbpm-client},keycloak.clientSecret=${KEYCLOAK_CLIENT_SECRET:-clientsecret}
+      JBPM_HT_CALLBACK_PROPERTIES: keycloak.url=${KEYCLOAK_URL:-https://keycloak.dms.local/auth},keycloak.realm=${KEYCLOAK_REALM:-dms-realm},keycloak.clientId=${KEYCLOAK_CLIENT_ID:-jbpm-client},keycloak.clientSecret=${KEYCLOAK_CLIENT_SECRET:-clientsecret}
     depends_on:
       postgres:
         condition: service_healthy
@@ -108,7 +115,7 @@ services:
       - dms-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.jbpm.rule=Host(`jbpm.localhost`)"
+      - "traefik.http.routers.jbpm.rule=Host(`jbpm.dms.local`)"
       - "traefik.http.routers.jbpm.entrypoints=websecure"
       - "traefik.http.routers.jbpm.tls=true"
       - "traefik.http.services.jbpm.loadbalancer.server.port=8080"
