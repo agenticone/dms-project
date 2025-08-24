@@ -53,6 +53,30 @@
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": true,
       "publicClient": false
+    },
+    {
+      "clientId": "kie-server-client",
+      "name": "KIE Server Client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "kieserversecret",
+      "redirectUris": ["https://${JBPM_HOSTNAME}/kie-server/*"],
+      "webOrigins": ["https://${JBPM_HOSTNAME}"],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "roles": [
+        {
+          "name": "kie-server",
+          "description": "Role for KIE Server access",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "kie-server-client"
+        }
+      ]
     }
   ]
 }

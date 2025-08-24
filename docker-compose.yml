@@ -121,7 +121,7 @@ services:
       - "traefik.http.routers.jbpm.tls=true"
       - "traefik.http.services.jbpm.loadbalancer.server.port=8080"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/business-central/ || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/kie-server/services/rest/server/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 10
