@@ -18,12 +18,19 @@ entryPoints:
 providers:
   docker:
     exposedByDefault: false
+
 tls:
   options:
     default:
       minVersion: VersionTLS12
-  certificates:  # Self-signed for dev
-    - certFile: /certs/selfsigned.crt
-      keyFile: /certs/selfsigned.key
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: tech@agenticone.in  # Replace with your actual email address
+      storage: /certs/acme.json
+      dnsChallenge:
+        provider: cloudflare #Change the DNS Provider if you are using other DNS
+
 
 # Generate self-signed certs manually before starting: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout traefik/certs/selfsigned.key -out traefik/certs/selfsigned.crt

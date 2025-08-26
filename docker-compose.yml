@@ -20,6 +20,7 @@ services:
       # Define the router for the dashboard, using the internal 'api' service
       - "traefik.http.routers.traefik-dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.traefik-dashboard.tls=true"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
       # Add Basic Authentication middleware. Replace the user hash with the one you generated.
@@ -81,6 +82,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.keycloak.rule=Host(`${KEYCLOAK_HOSTNAME}`)"
       - "traefik.http.routers.keycloak.entrypoints=websecure"
+      - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
       - "traefik.http.routers.keycloak.tls=true"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
     healthcheck:
@@ -118,6 +120,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.jbpm.rule=Host(`${JBPM_HOSTNAME}`)"
       - "traefik.http.routers.jbpm.entrypoints=websecure"
+      - "traefik.http.routers.jbpm.tls.certresolver=letsencrypt"
       - "traefik.http.routers.jbpm.tls=true"
       - "traefik.http.services.jbpm.loadbalancer.server.port=8080"
     healthcheck:
