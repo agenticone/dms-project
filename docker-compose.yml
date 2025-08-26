@@ -11,9 +11,11 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./traefik/certs:/certs:ro
+      - ./traefik/certs:/certs
     networks:
       - dms-net
+    environment:
+      - CF_API_TOKEN=${CF_API_TOKEN}
     labels:
       # Enable Traefik to route to its own dashboard
       - "traefik.enable=true"
@@ -65,7 +67,6 @@ services:
       LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-adminpassword} # Pass LDAP password for realm import
       KC_HEALTH_ENABLED: "true"
       KC_HTTP_ENABLED: "true"
-      KC_HTTPS_ENABLED: "true"
       KC_PROXY: edge
       KC_LOG_LEVEL: DEBUG
     depends_on:
@@ -75,7 +76,7 @@ services:
         condition: service_healthy
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json:ro
-    command: start-dev --import-realm
+    command: start --import-realm --optimized
     networks:
       - dms-net
     labels:

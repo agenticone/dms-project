@@ -1,82 +1,17 @@
 {
-  "id": "dms-realm",
   "realm": "dms-realm",
-  "displayName": "DMS Realm",
-  "enabled": true,
-  "sslRequired": "external",
-  "registrationAllowed": false,
-  "loginWithEmailAllowed": true,
-  "duplicateEmailsAllowed": false,
-  "resetPasswordAllowed": true,
-  "editUsernameAllowed": false,
-  "bruteForceProtected": true,
-  "components": {
-    "org.keycloak.storage.UserStorageProvider": [
-      {
-        "id": "ldap-federation",
-        "name": "openldap-federation",
-        "providerId": "ldap",
-        "config": {
-          "vendor": ["other"],
-          "usernameLDAPAttribute": ["uid"],
-          "rdnLDAPAttribute": ["uid"],
-          "uuidLDAPAttribute": ["uid"],
-          "userObjectClasses": ["inetOrgPerson"],
-          "connectionUrl": ["ldap://openldap:1389"],
-          "connectionTimeout": ["5000"],
-          "readTimeout": ["5000"],
-          "usersDn": ["ou=users,dc=dms,dc=local"],
-          "bindCredential": ["${LDAP_ADMIN_PASSWORD:-adminpassword}"],
-          "bindDn": ["cn=admin,dc=dms,dc=local"],
-          "searchScope": ["1"],
-          "pagination": ["true"],
-          "editMode": ["READ_ONLY"],
-          "syncRegistrations": ["false"],
-          "allowKerberosAuthentication": ["false"],
-          "useKerberosForPasswordAuthentication": ["false"]
-        }
-      }
-    ]
-  },
   "clients": [
     {
       "clientId": "jbpm-client",
-      "name": "JBPM Client",
-      "enabled": true,
-      "protocol": "openid-connect",
-      "clientAuthenticatorType": "client-secret",
-      "secret": "clientsecret",
-      "redirectUris": ["https://${JBPM_HOSTNAME}/business-central/*", "https://${JBPM_HOSTNAME}/kie-server/*"],
-      "webOrigins": ["https://${JBPM_HOSTNAME}"],
-      "standardFlowEnabled": true,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": true,
-      "publicClient": false
-    },
-    {
-      "clientId": "kie-server-client",
-      "name": "KIE Server Client",
-      "enabled": true,
-      "protocol": "openid-connect",
-      "clientAuthenticatorType": "client-secret",
-      "secret": "kieserversecret",
-      "redirectUris": ["https://${JBPM_HOSTNAME}/kie-server/*"],
-      "webOrigins": ["https://${JBPM_HOSTNAME}"],
-      "standardFlowEnabled": true,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": true,
-      "publicClient": false,
-      "roles": [
-        {
-          "name": "kie-server",
-          "description": "Role for KIE Server access",
-          "composite": false,
-          "clientRole": true,
-          "containerId": "kie-server-client"
-        }
+      "...": "..."
+    }
+  ],
+  "roles": {
+    "client": {
+      "jbpm-client": [
+        { "name": "user", "description": "jBPM user role" },
+        { "name": "admin", "description": "jBPM admin role" }
       ]
     }
-  ]
+  }
 }
