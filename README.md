@@ -48,6 +48,14 @@ This automates creating a Ubuntu VM on Hyper-V, bridged to 'ExtSwitchWSLBridge',
    - Verification: Browser: `https://workflow.agenticone.in/business-central`. The certificate should be valid from Let's Encrypt.
    - Debug: Firewall: Allow inbound on VM (ufw allow if enabled). Ensure Traefik labels correct.
 
+### JBPM shows a 404 Error
+
+A 404 error from the JBPM URL (`/business-central/`) usually means the web application failed to deploy.
+1.  **Check JBPM Logs:** Run `docker compose logs jbpm` and look for errors during startup, especially related to `Keycloak` or database connections.
+2.  **Check Deployment Status:** SSH into the VM and `exec` into the container to check the deployment markers.
+    `docker compose exec jbpm ls -l /opt/jboss/wildfly/standalone/deployments/`
+    You should see `business-central.war.deployed`. If you see `business-central.war.failed`, the logs from step 1 will contain the reason.
+
 6. **Security Note: Traefik Dashboard Password**
    The `docker-compose.yml` file contains a default password hash for the Traefik dashboard. For any real deployment, you should generate your own. You can do this by installing `apache2-utils` (`sudo apt-get install apache2-utils`) and running:
    `echo $(htpasswd -nb admin your_new_password) | sed -e s/\\$/\\$\\$/g`

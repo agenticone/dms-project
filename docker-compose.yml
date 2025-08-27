@@ -101,10 +101,6 @@ services:
       JBPM_DB_NAME: jbpm
       JBPM_DB_USER: jbpm
       JBPM_DB_PASSWORD: ${JBPM_DB_PASSWORD:-jbpmpassword}
-      KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-dms-realm}
-      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-jbpm-client}
-      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-clientsecret}
       JAVA_OPTS_APPEND: "-Djboss.host.name=${JBPM_HOSTNAME} -Djaeger.sampler.type=const -Djaeger.sampler.param=0" # Set public hostname and disable Jaeger tracing
       JBPM_HT_CALLBACK_CLASS: org.jbpm.services.task.identity.KeycloakUserGroupCallbackImpl
       JBPM_HT_CALLBACK_PROPERTIES: keycloak.url=http://keycloak:8080,keycloak.realm=${KEYCLOAK_REALM:-dms-realm},keycloak.clientId=${KEYCLOAK_CLIENT_ID:-jbpm-client},keycloak.clientSecret=${KEYCLOAK_CLIENT_SECRET:-clientsecret}
@@ -113,6 +109,9 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+    volumes:
+      # Mount a specific keycloak.json to ensure correct internal communication
+      - ./jbpm/keycloak.json:/opt/jboss/keycloak.json:ro
     networks:
       - dms-net
     labels:
