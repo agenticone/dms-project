@@ -1,5 +1,12 @@
+# Environment files
 .env
-.vagrant
-.vagrant/*
-traefik/certs/*
 
+# Traefik certificates
+/traefik/certs/acme.json
+/traefik/certs/
+
+# Local data volumes
+/postgres-data/
+/openldap-data/
+/mongodb-data/
+/.vagrant/
