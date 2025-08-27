@@ -31,15 +31,11 @@ sudo systemctl enable docker
 sudo systemctl start docker
 sudo usermod -aG docker vagrant  # Allow vagrant user to run docker
 
-echo "Generating self-signed certs if not exist..."
+echo "Preparing Traefik certificate storage..."
 mkdir -p /vagrant/traefik/certs
-if [ ! -f /vagrant/traefik/certs/selfsigned.key ]; then
-  openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /vagrant/traefik/certs/selfsigned.key \
-    -out /vagrant/traefik/certs/selfsigned.crt \
-    -subj "/CN=dms.local" \
-    -addext "subjectAltName = DNS:${TRAEFIK_HOSTNAME},DNS:${KEYCLOAK_HOSTNAME},DNS:${JBPM_HOSTNAME}"
-fi
+# Create the acme.json file for Let's Encrypt certificates and set correct permissions
+touch /vagrant/traefik/certs/acme.json
+chmod 600 /vagrant/traefik/certs/acme.json
 
 echo "Starting Docker Compose..."
 cd /vagrant

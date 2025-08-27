@@ -3,6 +3,8 @@ services:
     image: traefik:v3.0
     container_name: traefik
     restart: unless-stopped
+    # Configuration is now loaded from traefik.yml, command-line args override it
+    command: ["--log.level=DEBUG"]
     ports:
       - "80:80"
       - "443:443"
@@ -19,7 +21,6 @@ services:
       - "traefik.http.routers.traefik-dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.traefik-dashboard.tls=true"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
       # Add Basic Authentication middleware. Replace the user hash with the one you generated.
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$QVXgZ79u$$Qn/s5tQYyKdX66Vf462K20" # Default: admin/your_secure_password
@@ -53,10 +54,8 @@ services:
     restart: unless-stopped
     environment:
       KC_DB: postgres
-      KC_DB_URL_HOST: postgres
-      KC_DB_URL_DATABASE: keycloak
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak?connectTimeout=30&socketTimeout=30&tcpKeepAlive=true
       KC_DB_USERNAME: keycloak
-      KC_DB_URL_PROPERTIES: "?connectTimeout=30&socketTimeout=30&tcpKeepAlive=true"
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloakpassword}
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-adminpassword}
@@ -65,6 +64,7 @@ services:
       LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-adminpassword} # Pass LDAP password for realm import
       KC_HEALTH_ENABLED: "true"
       KC_HTTP_ENABLED: "true"
+      KC_HTTPS_ENABLED: "true"
       KC_PROXY: edge
       KC_LOG_LEVEL: DEBUG
     depends_on:
@@ -73,8 +73,8 @@ services:
       openldap:
         condition: service_healthy
     volumes:
-      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json:ro
-    command: start --import-realm --optimized
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json
+    command: start --import-realm
     networks:
       - dms-net
     labels:
@@ -82,7 +82,6 @@ services:
       - "traefik.http.routers.keycloak.rule=Host(`${KEYCLOAK_HOSTNAME}`)"
       - "traefik.http.routers.keycloak.entrypoints=websecure"
       - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.keycloak.tls=true"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/health/ready"]
@@ -106,6 +105,7 @@ services:
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-dms-realm}
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-jbpm-client}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-clientsecret}
+      JAVA_OPTS_APPEND: "-Dwildfly.microprofile.opentracing.smallrye.enabled=false" # Disable Jaeger tracing to prevent log spam
       JBPM_HT_CALLBACK_CLASS: org.jbpm.services.task.identity.KeycloakUserGroupCallbackImpl
       JBPM_HT_CALLBACK_PROPERTIES: keycloak.url=https://${KEYCLOAK_HOSTNAME}/auth,keycloak.realm=${KEYCLOAK_REALM:-dms-realm},keycloak.clientId=${KEYCLOAK_CLIENT_ID:-jbpm-client},keycloak.clientSecret=${KEYCLOAK_CLIENT_SECRET:-clientsecret}
     depends_on:
@@ -120,7 +120,11 @@ services:
       - "traefik.http.routers.jbpm.rule=Host(`${JBPM_HOSTNAME}`)"
       - "traefik.http.routers.jbpm.entrypoints=websecure"
       - "traefik.http.routers.jbpm.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.jbpm.tls=true"
+      # Add a middleware to redirect from the root path (/) to the application path (/business-central/)
+      - "traefik.http.middlewares.jbpm-redirect.redirectregex.regex=^https?://([^/]+)/?$$"
+      - "traefik.http.middlewares.jbpm-redirect.redirectregex.replacement=https://$$1/business-central/"
+      - "traefik.http.middlewares.jbpm-redirect.redirectregex.permanent=true"
+      - "traefik.http.routers.jbpm.middlewares=jbpm-redirect"
       - "traefik.http.services.jbpm.loadbalancer.server.port=8080"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/kie-server/services/rest/server/ || exit 1"]
@@ -152,7 +156,6 @@ services:
       # Pass DB passwords for init script
       KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloakpassword}
       JBPM_DB_PASSWORD: ${JBPM_DB_PASSWORD:-jbpmpassword}
-      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     volumes:
       - ./postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - postgres-data:/var/lib/postgresql/data

@@ -3,7 +3,19 @@
   "clients": [
     {
       "clientId": "jbpm-client",
-      "...": "..."
+      "enabled": true,
+      "protocol": "openid-connect",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "clientsecret",
+      "redirectUris": [
+        "https://${JBPM_HOSTNAME}/business-central/*"
+      ],
+      "webOrigins": [
+        "https://${JBPM_HOSTNAME}"
+      ],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "publicClient": false
     }
   ],
   "roles": {
