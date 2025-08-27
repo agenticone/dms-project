@@ -12,8 +12,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/certs:/certs
-    networks:
-      - dms-net
+    networks: # Define aliases for internal container-to-container communication via public hostnames
+      dms-net:
+        aliases:
+          - ${KEYCLOAK_HOSTNAME}
+          - ${JBPM_HOSTNAME}
     labels:
       # Enable Traefik to route to its own dashboard
       - "traefik.enable=true"
