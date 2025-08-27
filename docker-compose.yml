@@ -12,11 +12,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/certs:/certs
-    networks: # Define aliases for internal container-to-container communication via public hostnames
-      dms-net:
-        aliases:
-          - ${KEYCLOAK_HOSTNAME}
-          - ${JBPM_HOSTNAME}
+    networks:
+      - dms-net
     labels:
       # Enable Traefik to route to its own dashboard
       - "traefik.enable=true"
@@ -104,13 +101,13 @@ services:
       JBPM_DB_NAME: jbpm
       JBPM_DB_USER: jbpm
       JBPM_DB_PASSWORD: ${JBPM_DB_PASSWORD:-jbpmpassword}
-      KEYCLOAK_URL: https://${KEYCLOAK_HOSTNAME}/auth
+      KEYCLOAK_URL: http://keycloak:8080
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-dms-realm}
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-jbpm-client}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-clientsecret}
-      JAVA_OPTS_APPEND: "-Dwildfly.microprofile.opentracing.smallrye.enabled=false" # Disable Jaeger tracing to prevent log spam
+      JAVA_OPTS_APPEND: "-Djboss.host.name=${JBPM_HOSTNAME} -Djaeger.sampler.type=const -Djaeger.sampler.param=0" # Set public hostname and disable Jaeger tracing
       JBPM_HT_CALLBACK_CLASS: org.jbpm.services.task.identity.KeycloakUserGroupCallbackImpl
-      JBPM_HT_CALLBACK_PROPERTIES: keycloak.url=https://${KEYCLOAK_HOSTNAME}/auth,keycloak.realm=${KEYCLOAK_REALM:-dms-realm},keycloak.clientId=${KEYCLOAK_CLIENT_ID:-jbpm-client},keycloak.clientSecret=${KEYCLOAK_CLIENT_SECRET:-clientsecret}
+      JBPM_HT_CALLBACK_PROPERTIES: keycloak.url=http://keycloak:8080,keycloak.realm=${KEYCLOAK_REALM:-dms-realm},keycloak.clientId=${KEYCLOAK_CLIENT_ID:-jbpm-client},keycloak.clientSecret=${KEYCLOAK_CLIENT_SECRET:-clientsecret}
     depends_on:
       postgres:
         condition: service_healthy
