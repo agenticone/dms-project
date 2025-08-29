@@ -104,3 +104,16 @@ givenName: User
 uid: user10
 mail: user10@dms.local
 userPassword: password10
+
+# Add this to your openldap/init.ldif
+
+dn: ou=groups,dc=dms,dc=local
+objectClass: organizationalUnit
+ou: groups
+
+dn: cn=jbpm-users,ou=groups,dc=dms,dc=local
+objectClass: top
+objectClass: groupOfNames
+cn: jbpm-users
+# Add members by their full DN. Replace with actual users from your LDIF.
+member: uid=user01,ou=users,dc=dms,dc=local

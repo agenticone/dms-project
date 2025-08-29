@@ -1,0 +1,11 @@
+{
+  "realm": "dms-realm",
+  "auth-server-url": "http://keycloak:8080/",
+  "ssl-required": "none",
+  "resource": "jbpm-client",
+  "credentials": {
+    "secret": "clientsecret"
+  },
+  "confidential-port": 0
+}
+

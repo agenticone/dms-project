@@ -7,7 +7,7 @@ This automates creating a Ubuntu VM on Hyper-V, bridged to 'ExtSwitchWSLBridge',
 - Vagrant installed[](https://www.vagrantup.com/downloads).
 - Install Hyper-V provider: `vagrant plugin install vagrant-hyperv`.
 - Existing Hyper-V switch 'ExtSwitchWSLBridge' (create if needed via Hyper-V Manager > Virtual Switch Manager > External).
-- DMS project files in this directory (copy from previous setup: docker-compose.yml, .env, traefik/, openldap/, keycloak/).
+- DMS project files in this directory (copy from previous setup: docker-compose.yml, .env, traefik/, openldap/, keycloak/, jbpm/).
 - PowerShell as admin if issues arise.
 
 ## Installation Steps
@@ -55,6 +55,12 @@ A 404 error from the JBPM URL (`/business-central/`) usually means the web appli
 2.  **Check Deployment Status:** SSH into the VM and `exec` into the container to check the deployment markers.
     `docker compose exec jbpm ls -l /opt/jboss/wildfly/standalone/deployments/`
     You should see `business-central.war.deployed`. If you see `business-central.war.failed`, the logs from step 1 will contain the reason.
+
+#### Common Cause: Keycloak Adapter Configuration
+
+The most common reason for deployment failure is an incorrect Keycloak adapter configuration for internal communication. The jBPM container needs to talk to the Keycloak container over the internal Docker network (e.g., `http://keycloak:8080`), which is not encrypted.
+
+**Solution:** The `docker-compose.yml` file mounts a `./jbpm/keycloak.json` file into the container to configure this. If this file is missing, or if it contains the public HTTPS URL for Keycloak, the jBPM application will fail to deploy. Ensure this file exists and is configured for internal, non-SSL communication as shown in the project.
 
 6. **Security Note: Traefik Dashboard Password**
    The `docker-compose.yml` file contains a default password hash for the Traefik dashboard. For any real deployment, you should generate your own. You can do this by installing `apache2-utils` (`sudo apt-get install apache2-utils`) and running:
