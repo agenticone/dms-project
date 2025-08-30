@@ -1,0 +1,14 @@
+{
+  "name": "app-server",
+  "version": "1.0.0",
+  "description": "Application server with React frontend and Node.js backend.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mongodb": "^6.5.0"
+  },
+  "license": "ISC"
+}

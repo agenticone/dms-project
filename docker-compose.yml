@@ -132,6 +132,25 @@ services:
       retries: 10
       start_period: 240s
 
+  app-server:
+    build: ./app-server
+    container_name: app-server
+    restart: unless-stopped
+    environment:
+      # Connection string for MongoDB. Uses service name 'mongodb'.
+      # Note: The user/pass/db are from your mongodb service definition.
+      MONGO_URL: "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_INITDB_DATABASE}?authSource=admin"
+    depends_on:
+      - mongodb
+    networks:
+      - dms-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app-server.rule=Host(`${DMS_HOSTNAME}`)"
+      - "traefik.http.routers.app-server.entrypoints=websecure"
+      - "traefik.http.routers.app-server.tls.certresolver=letsencrypt"
+      - "traefik.http.services.app-server.loadbalancer.server.port=3000"
+
   mongodb:
     image: mongo:8.0
     container_name: mongodb

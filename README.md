@@ -38,14 +38,14 @@ This automates creating a Ubuntu VM on Hyper-V, bridged to 'ExtSwitchWSLBridge',
    - SSH: `vagrant ssh`.
    - Run `docker ps` (all services up).
    - Verify LDAP users: `docker compose exec openldap ldapsearch -x -H ldap://localhost:1389 -b "ou=users,dc=dms,dc=local" "(objectClass=inetOrgPerson)" uid cn`
-   - JBPM dashboard: `https://workflow.agenticone.in/business-central` (or your configured JBPM hostname).
+   - Access points: `https://dms.agenticone.in` (frontend), `https://workflow.agenticone.in/business-central` (jBPM), `https://sso.agenticone.in` (Keycloak).
    - Verification: Logs: `docker compose logs -f traefik`. Access Traefik dashboard: `https://demo.agenticone.in` (or your configured Traefik hostname).
    - Debug: If compose fails, check /vagrant/docker-compose.yml paths. Regenerate certs if SSL issues. Restart: `docker compose down && docker compose up -d`.
 
 5. **Access Services from Host**
-   - For production, ensure your DNS records for `demo.agenticone.in`, `sso.agenticone.in`, and `workflow.agenticone.in` point to the public IP of your server.
+   - For production, ensure your DNS records for `dms.agenticone.in`, `demo.agenticone.in`, `sso.agenticone.in`, and `workflow.agenticone.in` point to the public IP of your server.
    - For local testing, you can add these hostnames to your local hosts file (e.g., `C:\Windows\System32\drivers\etc\hosts`) pointing to the VM's IP.
-   - Verification: Browser: `https://workflow.agenticone.in/business-central`. The certificate should be valid from Let's Encrypt.
+   - Verification: Browser: `https://dms.agenticone.in`. The certificate should be valid from Let's Encrypt.
    - Debug: Firewall: Allow inbound on VM (ufw allow if enabled). Ensure Traefik labels correct.
 
 ### JBPM shows a 404 Error
