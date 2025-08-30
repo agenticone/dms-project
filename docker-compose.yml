@@ -23,7 +23,7 @@ services:
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
       # Add Basic Authentication middleware. Replace the user hash with the one you generated.
-      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$QVXgZ79u$$Qn/s5tQYyKdX66Vf462K20" # Default: admin/your_secure_password
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_AUTH_USERS}"
       # Apply the auth middleware to the dashboard router
       - "traefik.http.routers.traefik-dashboard.middlewares=dashboard-auth"
 
@@ -49,7 +49,11 @@ services:
       start_period: 120s
 
   keycloak:
-    build: ./keycloak
+    build:
+      context: ./keycloak
+      dockerfile: Dockerfile
+      args:
+        - PG_JDBC_VERSION=42.7.3
     container_name: keycloak
     restart: unless-stopped
     environment:
@@ -84,7 +88,10 @@ services:
       - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/health/ready"]
+      # Use the curl binary we added to a custom /tools directory.
+      # We must set LD_LIBRARY_PATH so curl can find its copied libraries.
+      # Using CMD-SHELL allows us to set the environment variable for the command.
+      test: ["CMD-SHELL", "LD_LIBRARY_PATH=/tools/lib /tools/bin/curl -f http://localhost:9000/health/ready"]
       interval: 10s
       timeout: 10s
       retries: 30
@@ -138,8 +145,7 @@ services:
     restart: unless-stopped
     environment:
       # Connection string for MongoDB. Uses service name 'mongodb'.
-      # Note: The user/pass/db are from your mongodb service definition.
-      MONGO_URL: "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_INITDB_DATABASE}?authSource=admin"
+      MONGO_URL: "mongodb://${MONGO_USER:-mongo}:${MONGO_PASSWORD:-mongopassword}@mongodb:27017/${MONGO_DB:-bpdata}?authSource=admin"
     depends_on:
       - mongodb
     networks:
@@ -156,9 +162,9 @@ services:
     container_name: mongodb
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-mongo}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-mongopassword}
-      MONGO_INITDB_DATABASE: bpdata
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-bpdata}
     volumes:
       - mongodb-data:/data/db
     networks:

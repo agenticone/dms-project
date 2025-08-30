@@ -2,9 +2,21 @@
 
 set -e
 
-# Load environment variables from .env file in the /vagrant directory
+# Determine the project root directory (where this script is located)
+# and change the current directory to it. This makes all paths relative.
+PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+cd "$PROJECT_ROOT"
+
+# Load environment variables from .env file in the project root
+# Check for a vagrant-specific file first.
 set -a
-[ -f /vagrant/.env ] && source /vagrant/.env
+if [ -f ./.env.vagrant ]; then
+  echo "Loading Vagrant environment variables from ./.env.vagrant..."
+  source ./.env.vagrant
+else
+  echo "Loading default environment variables from ./.env..."
+  [ -f ./.env ] && source ./.env
+fi
 set +a
 
 echo "Updating system..."
@@ -29,19 +41,27 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plu
 echo "Starting Docker service..."
 sudo systemctl enable docker
 sudo systemctl start docker
-sudo usermod -aG docker vagrant  # Allow vagrant user to run docker
+# If the 'vagrant' user exists, add it to the docker group.
+if id "vagrant" &>/dev/null; then
+    echo "Adding vagrant user to docker group..."
+    sudo usermod -aG docker vagrant
+fi
 
 echo "Preparing Traefik certificate storage..."
-mkdir -p /vagrant/traefik/certs
+mkdir -p ./traefik/certs
 # Create the acme.json file for Let's Encrypt certificates and set correct permissions
-touch /vagrant/traefik/certs/acme.json
-chmod 600 /vagrant/traefik/certs/acme.json
+touch ./traefik/certs/acme.json
+chmod 600 ./traefik/certs/acme.json
 
 echo "Starting Docker Compose..."
-cd /vagrant
 # Run docker-compose as the vagrant user to ensure correct permissions on created files/volumes.
 # The 'sg' command executes the command with the 'docker' group's permissions,
-# ensuring it works even if the user's main shell session hasn't been refreshed.
+# which is necessary to communicate with the docker socket.
 sg docker -c "docker compose up -d"
 
-echo "Setup complete. Access services via VM's bridged IP (check with 'ip addr show')."
+echo "Setup complete."
+if id "vagrant" &>/dev/null; then
+    echo "Vagrant setup complete. Access services via VM's bridged IP (check with 'ip addr show')."
+else
+    echo "Deployment complete. Access services via your configured hostnames."
+fi

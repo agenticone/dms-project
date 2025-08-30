@@ -1,31 +1,33 @@
-# Stage 1: Builder
-# This stage adds the JDBC driver and runs the Keycloak build process to create an optimized server image.
-FROM quay.io/keycloak/keycloak:25.0.1 as builder
+# --- Stage 1: Builder ---
+# Use a minimal, generic Linux image to prepare curl and its dependencies.
+# Using a specific version of a small image like Fedora minimal for reproducibility.
+# The fedora-minimal image is hosted on the official Fedora registry, not Docker Hub.
+FROM registry.fedoraproject.org/fedora-minimal:39 AS builder
 
-# Define the PostgreSQL JDBC driver version as a build argument for easy updates.
-ARG PG_JDBC_VERSION=42.7.3
+# Install curl and utilities needed to copy its dependencies.
+# The fedora-minimal image uses 'microdnf' instead of the full 'dnf'.
+RUN microdnf install -y curl findutils && microdnf clean all
 
-# Set environment variables for the build
-ENV KC_DB=postgres
+# Create a staging directory for curl and its libraries, keeping them isolated.
+RUN mkdir -p /tools/bin /tools/lib
 
-# Copy the PostgreSQL JDBC driver from the build context into the providers directory.
-# You must download this JAR file and place it in the same directory as this Dockerfile.
-RUN echo "--- Verifying JDBC driver in build context ---" && ls -l "postgresql-${PG_JDBC_VERSION}.jar" || (echo "ERROR: PostgreSQL JDBC driver (postgresql-${PG_JDBC_VERSION}.jar) not found. Please download it and place it in the 'keycloak' directory." && exit 1)
-COPY --chown=keycloak:keycloak "postgresql-${PG_JDBC_VERSION}.jar" /opt/keycloak/providers/
+# Copy the curl binary to our isolated tools directory.
+RUN cp /usr/bin/curl /tools/bin/
 
-RUN echo "--- Verifying JDBC driver was copied to providers directory ---" && ls -l /opt/keycloak/providers/
+# Find all of curl's shared library dependencies and copy them to our isolated lib directory.
+RUN ldd /usr/bin/curl | grep '=> /' | awk '{print $3}' | xargs -I '{}' cp -v '{}' /tools/lib/
 
-# Run the build command. This packages the provider into the server runtime and creates an optimized build.
-RUN echo "--- Starting Keycloak build process ---"
-RUN /opt/keycloak/bin/kc.sh build
-RUN echo "--- Keycloak build process finished ---"
+# --- Stage 2: Final Image ---
+# Start from the official, minimal Keycloak image.
+FROM quay.io/keycloak/keycloak:24.0.4 AS final
 
-# Stage 2: Final image
-# This stage creates the final, lean image by copying the optimized server from the builder.
-FROM quay.io/keycloak/keycloak:25.0.1
+ARG PG_JDBC_VERSION
+# Copy the PostgreSQL JDBC driver from the build context (the 'keycloak' directory)
+COPY postgresql-${PG_JDBC_VERSION}.jar /opt/keycloak/providers/
 
-# Copy the pre-built and optimized server from the builder stage.
-COPY --from=builder /opt/keycloak/ /opt/keycloak/
-
-# The entrypoint will be inherited from the base image.
-# The command to start the server is specified in the docker-compose.yml file.
+# Switch to the root user to copy the files from the builder stage.
+USER root
+# Copy the isolated 'tools' directory containing curl and its libs.
+# This does not interfere with the base image's system files.
+COPY --from=builder /tools/ /tools/
+USER keycloak

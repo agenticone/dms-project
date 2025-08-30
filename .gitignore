@@ -10,3 +10,5 @@
 /openldap-data/
 /mongodb-data/
 /.vagrant/
++app-server/node_modules/
++node_modules/
