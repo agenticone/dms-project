@@ -52,8 +52,6 @@ services:
     build:
       context: ./keycloak
       dockerfile: Dockerfile
-      args:
-        - PG_JDBC_VERSION=42.7.3
     container_name: keycloak
     restart: unless-stopped
     environment:
@@ -77,7 +75,7 @@ services:
       openldap:
         condition: service_healthy
     volumes:
-      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json:ro
     command: start --import-realm
     networks:
       - dms-net
@@ -88,10 +86,7 @@ services:
       - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
     healthcheck:
-      # Use the curl binary we added to a custom /tools directory.
-      # We must set LD_LIBRARY_PATH so curl can find its copied libraries.
-      # Using CMD-SHELL allows us to set the environment variable for the command.
-      test: ["CMD-SHELL", "LD_LIBRARY_PATH=/tools/lib /tools/bin/curl -f http://localhost:9000/health/ready"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health/ready"]
       interval: 10s
       timeout: 10s
       retries: 30

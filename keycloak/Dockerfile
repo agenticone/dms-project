@@ -1,33 +1,27 @@
-# --- Stage 1: Builder ---
-# Use a minimal, generic Linux image to prepare curl and its dependencies.
-# Using a specific version of a small image like Fedora minimal for reproducibility.
-# The fedora-minimal image is hosted on the official Fedora registry, not Docker Hub.
-FROM registry.fedoraproject.org/fedora-minimal:39 AS builder
+# Stage 1: Builder
+# Use a full UBI 9 image that includes dnf and other tools
+FROM registry.access.redhat.com/ubi9/ubi:9.4 AS builder
 
-# Install curl and utilities needed to copy its dependencies.
-# The fedora-minimal image uses 'microdnf' instead of the full 'dnf'.
-RUN microdnf install -y curl findutils && microdnf clean all
+# Create directories for the binary and its libraries
+RUN mkdir -p /curl_dist/bin /curl_dist/libs
 
-# Create a staging directory for curl and its libraries, keeping them isolated.
-RUN mkdir -p /tools/bin /tools/lib
+# Copy the curl binary
+RUN cp /usr/bin/curl /curl_dist/bin/
 
-# Copy the curl binary to our isolated tools directory.
-RUN cp /usr/bin/curl /tools/bin/
+# Identify and copy all shared library dependencies of curl into a flat directory
+RUN ldd /usr/bin/curl | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -v '{}' /curl_dist/libs/
 
-# Find all of curl's shared library dependencies and copy them to our isolated lib directory.
-RUN ldd /usr/bin/curl | grep '=> /' | awk '{print $3}' | xargs -I '{}' cp -v '{}' /tools/lib/
+# Stage 2: Final Image
+# Use the official, minimal Keycloak image
+FROM quay.io/keycloak/keycloak:25.0.4
 
-# --- Stage 2: Final Image ---
-# Start from the official, minimal Keycloak image.
-FROM quay.io/keycloak/keycloak:24.0.4 AS final
-
-ARG PG_JDBC_VERSION
-# Copy the PostgreSQL JDBC driver from the build context (the 'keycloak' directory)
-COPY postgresql-${PG_JDBC_VERSION}.jar /opt/keycloak/providers/
-
-# Switch to the root user to copy the files from the builder stage.
+# Switch to root user to install packages
 USER root
-# Copy the isolated 'tools' directory containing curl and its libs.
-# This does not interfere with the base image's system files.
-COPY --from=builder /tools/ /tools/
+
+# Create destination directories and copy the curl binary and all its libraries from the builder stage
+RUN mkdir -p /usr/bin /usr/lib64
+COPY --from=builder /curl_dist/bin/curl /usr/bin/
+COPY --from=builder /curl_dist/libs/* /usr/lib64/
+
+# Switch back to the default keycloak user
 USER keycloak
