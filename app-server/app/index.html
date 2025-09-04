@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DMS Demo App</title>
+    <link rel="preconnect" href="https://unpkg.com" />
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 0; background: #0b132b; color: #e0e1dd; }
+      header { background: #1c2541; padding: 12px 16px; }
+      main { max-width: 720px; margin: 24px auto; background: #3a506b; padding: 20px; border-radius: 8px; }
+      label { display:block; margin: 8px 0 4px; }
+      input, textarea { width:100%; padding:10px; border-radius:6px; border:1px solid #778da9; background:#0b132b; color:#e0e1dd; }
+      button { margin-top: 12px; padding: 10px 14px; border-radius: 6px; border: none; background: #e07a5f; color: white; cursor: pointer; }
+      table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+      th, td { padding: 8px; border-bottom: 1px solid #1c2541; }
+      .row { display:flex; gap:12px; }
+      .row > div { flex:1; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h3>DMS Demo App</h3>
+    </header>
+    <main>
+      <div id="root">Loading…</div>
+    </main>
+
+    <!-- React + Babel (dev only) -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Keycloak JS -->
+    <script src="https://unpkg.com/keycloak-js@23.0.7/dist/keycloak.min.js"></script>
+
+    <script type="text/babel">
+      const { useEffect, useState } = React;
+
+      function App() {
+        const [kc, setKc] = useState(null);
+        const [profile, setProfile] = useState(null);
+        const [items, setItems] = useState([]);
+        const [form, setForm] = useState({ name: '', zip: '', phone: '', notes: '' });
+        const [error, setError] = useState(null);
+
+        useEffect(() => {
+          async function init() {
+            try {
+              const cfg = await fetch('/config.json').then(r => r.json());
+              const issuer = new URL(cfg.keycloak.issuerUrl);
+              const kcConfig = {
+                url: issuer.origin,
+                realm: cfg.keycloak.realm,
+                clientId: cfg.keycloak.clientId,
+              };
+              const keycloak = new window.Keycloak(kcConfig);
+              await keycloak.init({ onLoad: 'login-required', checkLoginIframe: false });
+              setKc(keycloak);
+              setProfile({ username: keycloak.tokenParsed.preferred_username, email: keycloak.tokenParsed.email });
+              await loadItems(keycloak);
+            } catch (e) {
+              console.error(e);
+              setError('Failed to initialize authentication.');
+            }
+          }
+          init();
+        }, []);
+
+        async function loadItems(keycloak) {
+          const res = await fetch('/api/submissions', {
+            headers: { Authorization: `Bearer ${keycloak.token}` },
+          });
+          if (!res.ok) { setError('Failed to load submissions'); return; }
+          setItems(await res.json());
+        }
+
+        async function handleSubmit(e) {
+          e.preventDefault();
+          setError(null);
+          try {
+            const res = await fetch('/api/submissions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${kc.token}` },
+              body: JSON.stringify(form),
+            });
+            if (!res.ok) { throw new Error('Submit failed'); }
+            setForm({ name: '', zip: '', phone: '', notes: '' });
+            await loadItems(kc);
+          } catch (e) {
+            console.error(e);
+            setError('Failed to save.');
+          }
+        }
+
+        if (!kc) return <div>Loading…</div>;
+
+        return (
+          <div>
+            <p>Signed in as <b>{profile?.username}</b>{profile?.email?` (${profile.email})`:''}.</p>
+            <form onSubmit={handleSubmit}>
+              <label>Name</label>
+              <input value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required />
+              <div className="row">
+                <div>
+                  <label>ZIP</label>
+                  <input value={form.zip} onChange={e=>setForm({...form, zip:e.target.value})} required />
+                </div>
+                <div>
+                  <label>Phone</label>
+                  <input value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})} required />
+                </div>
+              </div>
+              <label>Notes</label>
+              <textarea rows="3" value={form.notes} onChange={e=>setForm({...form, notes:e.target.value})} />
+              <button type="submit">Save</button>
+              {error && <div style={{color:'#ffb4a2', marginTop:8}}>{error}</div>}
+            </form>
+
+            <h4 style={{marginTop:24}}>My Submissions</h4>
+            <table>
+              <thead>
+                <tr><th>When</th><th>Name</th><th>ZIP</th><th>Phone</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                {items.map(it => (
+                  <tr key={it.id}>
+                    <td>{new Date(it.created_at).toLocaleString()}</td>
+                    <td>{it.name}</td>
+                    <td>{it.zip}</td>
+                    <td>{it.phone}</td>
+                    <td>{it.notes}</td>
+                  </tr>
+                ))}
+                {items.length === 0 && <tr><td colSpan="5">No submissions yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+  </body>
+  </html>
+

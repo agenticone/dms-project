@@ -138,13 +138,34 @@ services:
     build: ./app-server
     container_name: app-server
     restart: unless-stopped
+    command: sh -c "npm install && node server.js"
     environment:
-      # Connection string for MongoDB. Uses service name 'mongodb'.
+      # Postgres connection via libpq env vars
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      PGDATABASE: postgres
+      # MongoDB connection (reserved for future use)
+      MONGO_USER: ${MONGO_USER:-mongo}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:-mongopassword}
+      MONGO_DB: ${MONGO_DB:-bpdata}
+      MONGO_HOST: mongodb
       MONGO_URL: "mongodb://${MONGO_USER:-mongo}:${MONGO_PASSWORD:-mongopassword}@mongodb:27017/${MONGO_DB:-bpdata}?authSource=admin"
+      # Keycloak auth config for backend and frontend
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-dms-realm}
+      KEYCLOAK_CLIENT_ID: ${APP_CLIENT_ID:-dms-app}
+      KEYCLOAK_HOSTNAME: ${KEYCLOAK_HOSTNAME}
+      KEYCLOAK_ISSUER_URL: https://${KEYCLOAK_HOSTNAME}/realms/${KEYCLOAK_REALM:-dms-realm}
+      NODE_ENV: development
     depends_on:
-      - mongodb
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
     networks:
       - dms-net
+    volumes:
+      - ./app-server:/app
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app-server.rule=Host(`${DMS_HOSTNAME}`)"
