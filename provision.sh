@@ -24,6 +24,35 @@ else
 fi
 set +a
 
+echo "Waiting for network connectivity..."
+# Wait for default route to appear
+tries=0
+until ip route | grep -q '^default '; do
+  tries=$((tries+1))
+  if [ "$tries" -ge 60 ]; then
+    echo "No default route after 120s. Network state:"
+    ip addr || true
+    ip route || true
+    systemctl status systemd-networkd || true
+    break
+  fi
+  sleep 2
+done
+
+# Wait for DNS resolution to work for key hosts
+for host in archive.ubuntu.com download.docker.com registry-1.docker.io; do
+  dns_tries=0
+  until getent hosts "$host" >/dev/null 2>&1; do
+    dns_tries=$((dns_tries+1))
+    if [ "$dns_tries" -ge 60 ]; then
+      echo "DNS lookup for $host failed after 120s. Resolver status:"
+      command -v systemd-resolve >/dev/null && systemd-resolve --status || true
+      break
+    fi
+    sleep 2
+  done
+done
+
 echo "Updating system..."
 sudo apt-get update -y
 
