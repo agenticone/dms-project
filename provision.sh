@@ -2,9 +2,14 @@
 
 set -e
 
-# Determine the project root directory (where this script is located)
-# and change the current directory to it. This makes all paths relative.
-PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+# Determine the project root directory. When run via Vagrant, scripts are
+# uploaded to a temp path, so prefer the synced folder at /vagrant if present.
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+if [ -d /vagrant ] && [ -f /vagrant/docker-compose.yml ]; then
+  PROJECT_ROOT="/vagrant"
+else
+  PROJECT_ROOT="$SCRIPT_DIR"
+fi
 cd "$PROJECT_ROOT"
 
 # Load environment variables from .env file in the project root
@@ -34,8 +39,15 @@ sudo ufw --force enable  # Enable the firewall
 
 echo "Installing Docker..."
 sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+# Import Docker's GPG key in non-interactive mode and ensure world-readable
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+  | sudo gpg --dearmor --batch --yes -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+# Add Docker's apt repository and refresh package lists
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update -y
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
 echo "Starting Docker service..."
@@ -54,10 +66,24 @@ touch ./traefik/certs/acme.json
 chmod 600 ./traefik/certs/acme.json
 
 echo "Starting Docker Compose..."
-# Run docker-compose as the vagrant user to ensure correct permissions on created files/volumes.
-# The 'sg' command executes the command with the 'docker' group's permissions,
-# which is necessary to communicate with the docker socket.
-sg docker -c "docker compose up -d"
+# Resolve compose file and run as 'vagrant' with docker group permissions.
+COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
+if [ ! -f "$COMPOSE_FILE" ]; then
+  if [ -f "$PROJECT_ROOT/compose.yml" ]; then
+    COMPOSE_FILE="$PROJECT_ROOT/compose.yml"
+  else
+    echo "Docker Compose configuration not found in $PROJECT_ROOT"
+    ls -la "$PROJECT_ROOT" || true
+    exit 1
+  fi
+fi
+
+# Use sg to ensure access to the Docker socket even before newgrp applies.
+if id "vagrant" &>/dev/null; then
+  sudo -u vagrant sg docker -c "docker compose --project-directory '$PROJECT_ROOT' -f '$COMPOSE_FILE' up -d"
+else
+  sg docker -c "docker compose --project-directory '$PROJECT_ROOT' -f '$COMPOSE_FILE' up -d"
+fi
 
 echo "Setup complete."
 if id "vagrant" &>/dev/null; then
