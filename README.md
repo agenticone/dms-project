@@ -48,6 +48,31 @@ This automates creating a Ubuntu VM on Hyper-V, bridged to 'ExtSwitchWSLBridge',
    - Verification: Browser: `https://dms.agenticone.in`. The certificate should be valid from Let's Encrypt.
    - Debug: Firewall: Allow inbound on VM (ufw allow if enabled). Ensure Traefik labels correct.
 
+### Local TLS for private domains (e.g., *.dmsin.local)
+
+Let's Encrypt cannot issue certificates for private/local domains such as `*.local`.
+To get a trusted HTTPS experience locally, use Traefik's file-based TLS with a dev cert:
+
+1. Generate a certificate for your local domain.
+   - Recommended (mkcert):
+     - Install mkcert and trust the local CA.
+     - `mkcert "*.dmsin.local"`
+     - Move files to Traefik certs:
+       - `mv "_wildcard.dmsin.local.pem" traefik/certs/dev.crt`
+       - `mv "_wildcard.dmsin.local-key.pem" traefik/certs/dev.key`
+   - Alternative (OpenSSL self-signed):
+     - `openssl req -x509 -nodes -newkey rsa:2048 -days 825 -subj "/CN=*.dmsin.local" -keyout traefik/certs/dev.key -out traefik/certs/dev.crt`
+
+2. Ensure the dynamic cert config is present (already added): `traefik/dynamic-certs.yml`.
+
+3. Traefik is already configured to load `dynamic-certs.yml` and the `traefik/certs/` folder.
+   - For local use, keep your hosts file mapping `dms.dmsin.local`, `sso.dmsin.local`, `workflow.dmsin.local` to your VM/server IP.
+   - The compose labels still include Let's Encrypt for public domains; the file cert will be used for your `*.dmsin.local` SNI automatically.
+
+4. Restart stack: `docker compose down && docker compose up -d`.
+
+Environment hint: set `TLS_MODE=local` in `.env` (informational only) to indicate local TLS.
+
 ### JBPM shows a 404 Error
 
 A 404 error from the JBPM URL (`/business-central/`) usually means the web application failed to deploy.
@@ -95,3 +120,12 @@ This error means your request is not reaching the Traefik service. Follow these 
 - Updates: For newer Ubuntu/Docker, update box version in Vagrantfile.
 
 If problems, provide error logs from `vagrant up`.
+
+## Local development helpers
+
+- Dev certs: `make dev-certs`
+  - Reads `DOMAIN` from `.env` (defaults to `dmsin.local`).
+  - Uses `mkcert` to create `traefik/certs/dev.crt` and `traefik/certs/dev.key` for `*.DOMAIN`.
+- Run locally without ACME: `docker compose -f docker-compose.yml -f compose.local.yml up -d`
+  - Or simply: `make local-up` and `make local-down`.
+  - This override removes the `tls.certresolver=letsencrypt` labels for local-only hosts.

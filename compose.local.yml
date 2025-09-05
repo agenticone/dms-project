@@ -1,0 +1,35 @@
+services:
+  traefik:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_AUTH_USERS}"
+      - "traefik.http.routers.traefik-dashboard.middlewares=dashboard-auth"
+
+  keycloak:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.rule=Host(`${KEYCLOAK_HOSTNAME}`)"
+      - "traefik.http.routers.keycloak.entrypoints=websecure"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+
+  jbpm:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jbpm.rule=Host(`${JBPM_HOSTNAME}`)"
+      - "traefik.http.routers.jbpm.entrypoints=websecure"
+      - "traefik.http.middlewares.jbpm-redirect.redirectregex.regex=^https?://([^/]+)/?$$"
+      - "traefik.http.middlewares.jbpm-redirect.redirectregex.replacement=https://$$1/business-central/"
+      - "traefik.http.middlewares.jbpm-redirect.redirectregex.permanent=true"
+      - "traefik.http.routers.jbpm.middlewares=jbpm-redirect"
+      - "traefik.http.services.jbpm.loadbalancer.server.port=8080"
+
+  app-server:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app-server.rule=Host(`${DMS_HOSTNAME}`)"
+      - "traefik.http.routers.app-server.entrypoints=websecure"
+      - "traefik.http.services.app-server.loadbalancer.server.port=3000"
+

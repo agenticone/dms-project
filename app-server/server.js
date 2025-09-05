@@ -4,6 +4,7 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const { createRemoteJWKSet, jwtVerify } = require('jose');
 
+const { run: bootstrapKeycloak } = require('./scripts/bootstrap-keycloak');
 const app = express();
 const port = 3000;
 
@@ -127,4 +128,6 @@ app.listen(port, async () => {
   } catch (err) {
     console.error('Failed to initialize Postgres schema:', err);
   }
+  // Run Keycloak bootstrap in background; don't block the server
+  bootstrapKeycloak().catch(() => {});
 });

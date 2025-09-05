@@ -1,6 +1,24 @@
 {
   "realm": "dms-realm",
+  "enabled": true,
   "clients": [
+    {
+      "clientId": "dms-app",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "https://${DMS_HOSTNAME}/*"
+      ],
+      "webOrigins": [
+        "https://${DMS_HOSTNAME}"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
     {
       "clientId": "jbpm-client",
       "enabled": true,

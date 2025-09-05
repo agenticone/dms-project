@@ -1,0 +1,29 @@
+# Local development TLS certificates for Traefik
+#
+# Provide a certificate/key pair (ideally via mkcert) for your local domain
+# (e.g., *.dmsin.local). Place the files under traefik/certs/ as dev.crt/dev.key.
+# Traefik mounts that directory at /certs inside the container.
+#
+# Generate with mkcert (recommended):
+#   mkcert -install
+#   mkcert "*.dmsin.local"
+#   mv "_wildcard.dmsin.local.pem" traefik/certs/dev.crt
+#   mv "_wildcard.dmsin.local-key.pem" traefik/certs/dev.key
+#
+# Alternatively, generate a self-signed cert with OpenSSL:
+#   openssl req -x509 -nodes -newkey rsa:2048 -days 825 \
+#     -subj "/CN=*.dmsin.local" \
+#     -keyout traefik/certs/dev.key -out traefik/certs/dev.crt
+
+tls:
+  certificates:
+    - certFile: "/certs/dev.crt"
+      keyFile: "/certs/dev.key"
+
+  # Optional: set a default certificate so HTTPS works even if SNI mismatches
+  # stores:
+  #   default:
+  #     defaultCertificate:
+  #       certFile: "/certs/dev.crt"
+  #       keyFile: "/certs/dev.key"
+

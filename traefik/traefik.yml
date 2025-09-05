@@ -18,6 +18,9 @@ entryPoints:
 providers:
   docker:
     exposedByDefault: false
+  file:
+    filename: /etc/traefik/dynamic-certs.yml
+    watch: true
 
 tls:
   options:

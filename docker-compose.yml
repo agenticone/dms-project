@@ -11,6 +11,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic-certs.yml:/etc/traefik/dynamic-certs.yml:ro
       - ./traefik/certs:/certs
     networks:
       - dms-net
@@ -157,6 +158,11 @@ services:
       KEYCLOAK_HOSTNAME: ${KEYCLOAK_HOSTNAME}
       KEYCLOAK_ISSUER_URL: https://${KEYCLOAK_HOSTNAME}/realms/${KEYCLOAK_REALM:-dms-realm}
       NODE_ENV: development
+      # Admin credentials for bootstrap automation
+      KEYCLOAK_ADMIN_USERNAME: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-adminpassword}
+      # App public hostname for redirect URIs
+      DMS_HOSTNAME: ${DMS_HOSTNAME}
     depends_on:
       postgres:
         condition: service_healthy
